@@ -8,6 +8,7 @@ using namespace glm;
 unsigned char image[IMG_WIDTH * IMG_HEIGHT * 4];
 unsigned int floorMap[MAP_WIDTH * MAP_HEIGHT];
 unsigned int lightMap[MAP_WIDTH * MAP_HEIGHT];
+HitRecord hitImage[IMG_WIDTH];
 const glm::vec4 LIGHTS[NUM_LIGHTS] = { glm::vec4(3.0f, 1.0f, 3.0f, 32.0f), glm::vec4(31.0f, 0.6f, 10.0f, 8.0f),  glm::vec4(62.5f, 0.5f, 3.5f, 16.0f) };
 
 void createMap()
@@ -90,8 +91,6 @@ void createMap()
 
 				mask *= 2u;
 			}
-
-
 			lightMap[mapIndex] = lightMapValue;
 		}
 	}
@@ -105,6 +104,16 @@ unsigned int * getFloorMap()
 unsigned int * getLightMap()
 {
 	return &lightMap[0];
+}
+
+unsigned char * getImage()
+{
+	return &image[0];
+}
+
+HitRecord * getHitRecords()
+{
+	return &hitImage[0];
 }
 
 glm::vec4 getLight(const unsigned int i)
@@ -249,7 +258,6 @@ bool shadowRayCast(const glm::vec2 p, const glm::vec2 lightSrc)
 	return false;
 }
 
-
 void fillImage()
 {
 	for (int x = 0; x < IMG_WIDTH; x++)
@@ -266,7 +274,7 @@ void fillImage()
 	}
 }
 
-void rayCastImage(const glm::vec2 cameraPos, const glm::vec2 cameraDir, const float fov)
+void rayCast(const glm::vec2 cameraPos, const glm::vec2 cameraDir, const float fov)
 {
 	// compute camera values
 	float fp = std::tanf(fov * 0.5f);
@@ -295,7 +303,79 @@ void rayCastImage(const glm::vec2 cameraPos, const glm::vec2 cameraDir, const fl
 	}
 }
 
-void rayCast(float x, float y, float dirX, float dirY, float fov)
+void setPixel(const int x, const int y, const glm::ivec3 color)
+{
+	int idx = ((x + y * IMG_WIDTH) * 4);
+	image[idx] = color.x;
+	image[idx + 1] = color.y;
+	image[idx + 2] = color.z;
+	image[idx + 3] = 255;
+}
+
+void renderImage(const float imgFocalLength, const float fovYStep)
+{
+	for (int x = 0; x < IMG_WIDTH; x++)
+	{
+		const HitRecord &hitR = hitImage[x];
+		const float pixelDepth = hitR.dist;
+		int projWallPixelHeight = 0;
+
+		if (pixelDepth > 0.0f)
+		{
+			projWallPixelHeight = static_cast<int>((WALL_HEIGHT / (pixelDepth * imgFocalLength))  * static_cast<float>(IMG_HEIGHT));
+			projWallPixelHeight = (projWallPixelHeight < IMG_HEIGHT / 2) ? projWallPixelHeight : IMG_HEIGHT / 2;
+		}
+
+		int tmp = (IMG_HEIGHT / 2) - projWallPixelHeight;
+		int floorPixelHeight = tmp;
+		int ceilPixelHeight = IMG_HEIGHT - tmp;
+		const float depthScale = 2.0f;
+
+		for (int y = 0; y < IMG_HEIGHT; y++)
+		{
+
+			float theta = 0.0f;
+
+			if (y >= IMG_HEIGHT / 2)
+			{
+				theta = static_cast<float>(y - (IMG_HEIGHT / 2)) * fovYStep;
+			}
+			else
+			{
+				theta = -static_cast<float>((IMG_HEIGHT / 2) - y) * fovYStep;
+			}
+
+	
+			if (y < floorPixelHeight) // render floor
+			{
+				glm::vec2 ray(1.0f, std::sin(theta));
+				ray = glm::normalize(ray);
+				float t = (abs(ray.y) > 0.001f) ? (-WALL_HEIGHT) / ray.y : 1000.0f;
+				t -= imgFocalLength;
+				t *= depthScale;
+				setPixel(x, y, glm::ivec3(t + 50, t, t));
+			}
+			else if (y > ceilPixelHeight) // render Ceiling
+			{
+				glm::vec2 ray(1.0f, std::sin(theta));
+				ray = glm::normalize(ray);
+				float t = (abs(ray.y) > 0.001f)?  (WALL_HEIGHT) / ray.y : 1000.0f;
+				t -= imgFocalLength;
+				t *= depthScale;
+				setPixel(x, y, glm::ivec3(t, t, t + 50));
+			}
+			else
+			{
+				float t = pixelDepth * depthScale;
+				setPixel(x, y, glm::ivec3(t, t, t));
+			}
+
+		}
+	}
+
+}
+
+void rayCastImage(float x, float y, float dirX, float dirY, float fov)
 {
 	static bool mapCreated = false;
 	if (!mapCreated)
@@ -304,8 +384,36 @@ void rayCast(float x, float y, float dirX, float dirY, float fov)
 		mapCreated = true;
 	}
 
-	glm::vec2 dir(dirX, dirY);
-	dir = glm::normalize(dir);
-	rayCastImage(glm::vec2(x, y), dir, fov);
+	const float aspectRatio = (static_cast<float>(IMG_HEIGHT) / static_cast<float>(IMG_WIDTH));
+	const float fovy = fov * aspectRatio;
+	const float fovyStep = fovy / static_cast<float>(IMG_HEIGHT);
+	const float imgFocalLength = static_cast<float>(IMG_HEIGHT) / (static_cast<float>((IMG_WIDTH / 2)) / tanf(fov * 0.5f));
+
+	glm::vec2 cameraPos(x, y);
+	glm::vec2 cameraDir(dirX, dirY);
+	cameraDir = glm::normalize(cameraDir);
+
+	float fp = std::tanf(fov * 0.5f);
+	glm::vec2 A = cameraPos + cameraDir - glm::vec2(-cameraDir.y, cameraDir.x) * fp;
+	glm::vec2 Ap = cameraPos + cameraDir + glm::vec2(-cameraDir.y, cameraDir.x) * fp;
+	glm::vec2 B = Ap - A;
+
+	const float step = 1.0f / (static_cast<float>(IMG_WIDTH));
+	float s = 0.0f;
+
+	for (int i = 0; i < IMG_WIDTH; i++)
+	{
+		glm::vec2 d = glm::normalize((A + B * s) - cameraPos);
+		float cosdir = glm::dot(d, cameraDir);
+		hitImage[i] = rayCastMap(cameraPos, d);
+		hitImage[i].dist *= cosdir; // get the projected distance (Fish Bowl effect)
+		hitImage[i].dirX = d.x;
+		hitImage[i].dirY = d.y;
+		s += step;
+	}
+
+	renderImage(imgFocalLength,fovyStep);
 }
+
+
 

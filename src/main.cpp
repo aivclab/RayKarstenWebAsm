@@ -10,8 +10,6 @@ using namespace std;
 // Rendering
 const int QUAD_SIZE = 10;
 const int yOffset = 50;
-const float degToRad = 3.14159265359f / 180.0f;
-const float radToDeg = 180.0f/3.14159265359f;
 
 // Image setup
 const float ASPECT = (static_cast<float>(IMG_HEIGHT) / static_cast<float>(IMG_WIDTH));
@@ -21,7 +19,6 @@ const float FOVY_STEP = FOVY / static_cast<float>(IMG_HEIGHT);
 const float IMG_FOCAL_LENGTH = static_cast<float>(IMG_HEIGHT) / (static_cast<float>((IMG_WIDTH / 2)) / tanf(FOV * 0.5f));
 
 // World setup
-HitRecord hitImage[IMG_WIDTH];
 glm::vec2 cameraPos(16.0f, 5.0f);
 glm::vec2 cameraDir(0.9f, -0.05f);
 
@@ -120,11 +117,25 @@ void renderMap(HDC mydc)
 	}
 }
 
+void renderFinalImage(HDC hdc)
+{
+	unsigned char* img = getImage();
+	for (int y = 0; y < IMG_HEIGHT; y++)
+	{
+		for (int x = 0; x < IMG_WIDTH; x++)
+		{
+			int idx = ((x + y * IMG_WIDTH) * 4);
+			COLORREF color = RGB(img[idx], img[idx+1], img[idx+2]);
+			renderPixel(hdc, color, x, y);
+		}
+	}
+}
+
 void renderImage(HDC hdc)
 {
 	for (int i = 0; i < IMG_WIDTH; i++)
 	{
-		HitRecord &hitR = hitImage[i];
+		HitRecord &hitR = getHitRecords()[i];
 		const float d = hitR.dist + 1.0f;
 		const float l = hitR.lightDepth + 1.0f;
 		int pixelH = static_cast<int>(static_cast<float>(IMG_HEIGHT) *  (WALL_HEIGHT /d));
@@ -183,12 +194,11 @@ float InScatter(glm::vec3 start, glm::vec3 dir, glm::vec3 lightPos, float d)
 
 void renderDepthImage(HDC hdc)
 {
-
 	unsigned int *lightMap = getLightMap();
 
 	for (int x = 0; x < IMG_WIDTH; x++)
 	{
-		const HitRecord &hitR = hitImage[x];
+		const HitRecord &hitR = getHitRecords()[x];
 		const float pixelDepth = hitR.dist;
 		int projWallPixelHeight = 0;
 
@@ -311,22 +321,27 @@ int main()
 	renderPoint(hdc, RGB(0, 0, 200), cameraPos + glm::normalize(A-cameraPos) * 3.0f);
 	renderPoint(hdc, RGB(0, 200, 200), cameraPos + glm::normalize(Ap - cameraPos) * 3.0f);
 	
-	float step = 1.0f / (static_cast<float>(IMG_WIDTH));
+	/*float step = 1.0f / (static_cast<float>(IMG_WIDTH));
 	float s = 0.0f;
 
 	for (int i = 0; i < IMG_WIDTH; i++)
 	{
 		glm::vec2 d = glm::normalize((A + B * s) - cameraPos);
 		float cosdir = glm::dot(d, cameraDir);
-		hitImage[i] = rayCastMap(cameraPos, d);
-		hitImage[i].dist *= cosdir; // get the projected distance (Fish Bowl effect)
-		hitImage[i].dirX = d.x;
-		hitImage[i].dirY = d.y;
+
+		HitRecord &hitRecord = getHitRecords()[i];
+		hitRecord = rayCastMap(cameraPos, d);
+		hitRecord.dist *= cosdir; // get the projected distance (Fish Bowl effect)
+		hitRecord.dirX = d.x;
+		hitRecord.dirY = d.y;
 		s += step;
-	}
+	}*/
+
+	rayCastImage(cameraPos.x,cameraPos.y, cameraDir.x, cameraDir.y, degToRad*60.0f);
+	renderFinalImage(hdc);
 
 	//renderImage(mydc);
-	renderDepthImage(hdc);
+//	renderDepthImage(hdc);
 	ReleaseDC(myconsole, hdc);
 	cin.ignore();
 	return 0;

@@ -10,6 +10,10 @@ const int IMG_HEIGHT = 600;
 #define MAP_WIDTH 64
 #define MAP_HEIGHT 24
 #define NUM_LIGHTS 3
+
+const float degToRad = 3.14159265359f / 180.0f;
+const float radToDeg = 180.0f / 3.14159265359f;
+
 const float WALL_HEIGHT = 3.5f;
 
 const unsigned int MAP_EMPTY = 0u;
@@ -30,13 +34,18 @@ struct HitRecord
 	int mapY{ 0 };
 };
 
-void rayCast(float x, float y, float dirX, float dirY, float fov);
+
+void rayCastImage(float x, float y, float dirX, float dirY, float fov);
 bool shadowRayCast(const glm::vec2 p, const glm::vec2 lightSrc);
 HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir);
 void createMap();
 unsigned int *getFloorMap();
 unsigned int *getLightMap();
+unsigned char *getImage();
+HitRecord *getHitRecords();
 glm::vec4 getLight(const unsigned int i);
+
+
 
 #endif // RAY_LIB_H
 
