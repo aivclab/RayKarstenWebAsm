@@ -2,8 +2,8 @@
 
 import RayKarstenModule from "./RayKarsten.js";
 
-const WIDTH = 800;
-const HEIGHT = 600;
+const WIDTH = 512;
+const HEIGHT = 512;
 var index = 2;
 var mWASMReady = false;
 
@@ -56,9 +56,9 @@ function _addEventListener(evt, element, fn) {
 
 wrapper['onRuntimeInitialized'] = function()
   {
-    mWASMReady = true;
+   mWASMReady = true;
     console.log(wrapper);
-    wrapper.rayCast(10.0,10.0,1.0,0.0,1.0);
+    wrapper.rayCastImage(16.0,5.0,0.9,-0.1,60.0);
     var img = wrapper.getImage();
 
     _addEventListener('keydown', document, handleKeyboardEvent);
@@ -102,51 +102,5 @@ wrapper['onRuntimeInitialized'] = function()
         break;
     }
   }
-
-/*Module.onRuntimeInitialized = _ => {
-  console.log(Module.exclaim("hello world"));
-};*/
-
-/*async function start() {
-  const res = await fetch('./RayKarsten.wasm');
-  const buffer = await res.arrayBuffer();
-  const module = await WebAssembly.compile(buffer);
-  let imports = { env: {} };
-  WebAssembly.Module.imports(module).forEach(function (e) {
-    if (e.kind == "function") {
-      if(e.name == "_tanf")
-      {
-        imports.env[e.name] = Math.tan;
-      }
-      else if(e.name == "_printf")
-      {
-        imports.env[e.name] = function(x, y, z){ console.log(x); console.log(y); console.log(z)};
-      }
-      else
-      {
-      imports.env[e.name] = function () { };
-      }
-    }
-    else if (e.kind == "global") {
-      imports.env[e.name] = 0;
-    }
-    else if (e.kind == "memory") {
-      imports.env[e.name] = new WebAssembly.Memory({ initial: 1024 });
-    }
-    else if (e.kind == "table") {
-      imports.env[e.name] = new WebAssembly.Table({ element: "anyfunc", initial: 256 });
-    }
-  });
-
-  const instance = new WebAssembly.Instance(module, imports);
-  updateFunction = instance.exports._rayCast;
-  const offset = updateFunction(10.0, 10.0, 1.0, 0.0 , 1.25);//  instance.exports._getImage();
-  const linearMemory = new Uint8Array(imports.env.memory.buffer, offset, WIDTH * HEIGHT * 4);
-  for (let i = 0; i < linearMemory.length; i++) {
-    imgData.data[i] = linearMemory[i];
-  }
-  ctx.putImageData(imgData, 0, 0);
-}*/
-
 
 

@@ -22,5 +22,9 @@
   "dependencies": {
     "lodash": "^4.17.11"
   },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@bitbucket-server.alexandra.dk:7999/cg/raykarstenwebasm.git"
+  },
   "description": ""
 }

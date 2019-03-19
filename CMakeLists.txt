@@ -2,6 +2,8 @@ project(RayKarsten)
 cmake_minimum_required(VERSION 3.0)
 
 set (SRC
+    src/RayLib.cpp 
+    src/RayLib.h
     src/EmWrapper.cpp
 )
 
@@ -22,8 +24,8 @@ message(STATUS ${INCLUDE_DIRS})
 if (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
 	add_executable(${PROJECT_NAME} ${SRC})
 	set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 11 )
-  #  set(CMAKE_EXE_LINKER_FLAGS "-O3 -s EXPORTED_FUNCTIONS=['_rayCast'] -s SIDE_MODULE=1 -o rayKarsten.wasm" )
-  set(CMAKE_EXE_LINKER_FLAGS "--bind -O0 -s MODULARIZE=1 -g4" )
+  #set(CMAKE_EXE_LINKER_FLAGS "-O3 -s EXPORTED_FUNCTIONS=['_rayCastImage'] -s SIDE_MODULE=1 -o rayKarsten.wasm" )
+  set(CMAKE_EXE_LINKER_FLAGS "--bind -O0 -s MODULARIZE=1" )
   set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/src)
 else()
 	add_executable(${PROJECT_NAME} ${APPSRC})

@@ -104,8 +104,8 @@ void renderPoint(HDC hdc, COLORREF color, const glm::vec2 p)
 
 void renderMap(HDC mydc)
 {
-	unsigned int *floorM = getFloorMap();	
-	unsigned int *lightM = getLightMap();
+	unsigned int *floorM = getFloorMapPtr();	
+	unsigned int *lightM = getLightMapPtr();
 	for (int y = 0; y < MAP_HEIGHT; y++)
 	{
 		for (int x = 0; x < MAP_WIDTH; x++)
@@ -119,7 +119,7 @@ void renderMap(HDC mydc)
 
 void renderFinalImage(HDC hdc)
 {
-	unsigned char* img = getImage();
+	unsigned char* img = getImagePtr();
 	for (int y = 0; y < IMG_HEIGHT; y++)
 	{
 		for (int x = 0; x < IMG_WIDTH; x++)
@@ -194,7 +194,7 @@ float InScatter(glm::vec3 start, glm::vec3 dir, glm::vec3 lightPos, float d)
 
 void renderDepthImage(HDC hdc)
 {
-	unsigned int *lightMap = getLightMap();
+	unsigned int *lightMap = getLightMapPtr();
 
 	for (int x = 0; x < IMG_WIDTH; x++)
 	{
