@@ -15,5 +15,6 @@ val getImage()
 
 EMSCRIPTEN_BINDINGS(ray_module) {
 	function("rayCastImage", &rayCastImage);
+	function("getMapType", &getMapType);
 	function("getImage", &getImage);
 }
