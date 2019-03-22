@@ -7,6 +7,7 @@ using namespace glm;
 
 unsigned char image[IMG_WIDTH * IMG_HEIGHT * 4];
 unsigned int floorMap[MAP_WIDTH * MAP_HEIGHT];
+const glm::vec3 fogColor(20.0f, 50.0f, 25.0f);
 //unsigned int lightMap[MAP_WIDTH * MAP_HEIGHT];
 HitRecord hitImage[IMG_WIDTH];
 //const glm::vec4 LIGHTS[NUM_LIGHTS] = { glm::vec4(3.0f, 1.0f, 3.0f, 32.0f), glm::vec4(31.0f, 0.6f, 10.0f, 8.0f),  glm::vec4(62.5f, 0.5f, 3.5f, 16.0f) };
@@ -41,7 +42,7 @@ void createMap()
 	}
 
 
-	// create wall 1
+	// create wall 2
 	for (int y = 8; y < MAP_HEIGHT; y++)
 	{
 		mapIndex = MAP_WIDTH - 16 + y * MAP_WIDTH;
@@ -167,11 +168,12 @@ HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir)
 	iNext.y = (dir.y < 0.0f) ? static_cast<int>(std::ceil(p.y)) + iStep.y : static_cast<int>(std::floor(p.y)) + iStep.y;
 	bool firstStep = true;
 
+	int wallNormal = WALL_NORM_NEG_X;
 	float dist = 0.0f;
 	do
 	{
-		const float px =  p.x + dir.x * dist * 1.00001f;
-		const float py =  p.y + dir.y * dist * 1.00001f;
+		const float px = p.x + dir.x * dist *1.001f;
+		const float py = p.y + dir.y * dist *1.001f;
 		const unsigned int mapValue = (firstStep) ? MAP_EMPTY : getMapValue(glm::ivec2(px, py));
 		firstStep = false;
 
@@ -179,6 +181,7 @@ HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir)
 		{
 			hitc.dist = dist;
 			hitc.mapValue = MAP_WALL;
+			hitc.wallNormal = wallNormal;
 			hitc.mapX = iNext.x;
 			hitc.mapY = iNext.y;
 			return hitc;
@@ -188,6 +191,7 @@ HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir)
 		{
 			hitc.dist = dist;
 			hitc.mapValue = MAP_DOOR;
+			hitc.wallNormal = wallNormal;
 			hitc.mapX = iNext.x;
 			hitc.mapY = iNext.y;
 			return hitc;
@@ -209,8 +213,16 @@ HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir)
 		float dy = (static_cast<float>(iNext.y) - p.y) * deltaInv.y;
 		dist = glm::min(dx, dy);
 
-		if (std::abs(dx - dist) < 0.000001f) iNext.x += iStep.x;
-		if (std::abs(dy - dist) < 0.000001f) iNext.y += iStep.y;
+		if (std::abs(dx - dist) < 0.00001f)
+		{
+			iNext.x += iStep.x;
+			wallNormal = (iStep.x == -1) ? WALL_NORM_NEG_X : WALL_NORM_POS_X;
+		}
+		if (std::abs(dy - dist) < 0.00001f)
+		{
+			iNext.y += iStep.y;
+			wallNormal = (iStep.y == -1) ? WALL_NORM_NEG_Y : WALL_NORM_POS_Y;
+		}
 
 	} while (!outsideMap(iNext));
 
@@ -284,37 +296,9 @@ void fillImage()
 
 float getFogValue(const float depth, const float fogStart, const float fogEnd)
 {
-	return glm::min(1.0f, (fogEnd - depth) / (fogEnd - fogStart));
+	const float tmp = (depth > fogEnd)? 0.0001f : fogEnd - depth;
+	return glm::min(1.0f, tmp / (fogEnd - fogStart));
 }
-
-/*void rayCast(const glm::vec2 cameraPos, const glm::vec2 cameraDir, const float fov)
-{
-	// compute camera values
-	float fp = std::tanf(fov * 0.5f);
-	glm::vec2 A = cameraPos + cameraDir - glm::vec2(-cameraDir.y, cameraDir.x) * fp;
-	glm::vec2 Ap = cameraPos + cameraDir + glm::vec2(-cameraDir.y, cameraDir.x) * fp;
-	glm::vec2 B = Ap - A;
-	float step = 1.0f / (static_cast<float>(IMG_WIDTH));
-	float s = 0.0f;
-
-	for (int x = 0; x < IMG_WIDTH; x++)
-	{
-		glm::vec2 d = glm::normalize((A + B * s) - cameraPos);
-		float cosdir = glm::dot(d, cameraDir);
-		HitRecord hitR = rayCastMap(cameraPos, d);
-		for (int y = 0; y < IMG_HEIGHT; y++)
-		{
-			int idx = ((x + y * IMG_WIDTH) * 4);
-			// set the red and alpha components
-			image[idx] = 255;
-			image[idx + 1] = static_cast<unsigned int>(hitR.dist * cosdir);
-			image[idx + 2] = 0;
-			image[idx + 3] = 255;
-		}
-	
-		s += step;
-	}
-}*/
 
 void setPixel(const int x, const int y, const glm::ivec3 color)
 {
@@ -325,9 +309,30 @@ void setPixel(const int x, const int y, const glm::ivec3 color)
 	image[idx + 3] = 255;
 }
 
-const glm::vec3 fogColor(100.0f, 120.0f, 100.0f);
+glm::vec3 getWallNormal(const unsigned int wn)
+{
+	glm::vec3 norm(0.0f);
+	switch (wn)
+	{
+	case WALL_NORM_POS_X:
+		norm = glm::vec3(1.0f, 0.0f, 0.0f);
+		break;
+	case WALL_NORM_NEG_X:
+		norm = glm::vec3(-1.0f, 0.0f, 0.0f);
+		break;
+	case WALL_NORM_POS_Y:
+		norm = glm::vec3(0.0f, 0.0f, 1.0f);
+		break;
+	case WALL_NORM_NEG_Y:
+		norm = glm::vec3(0.0f, 0.0f, -1.0f);
+		break;
+	}
 
-void renderImage(const float imgFocalLength, const float fovYStep)
+	return norm;
+}
+
+
+void renderImage(const glm::vec3 cameraPos, const float imgFocalLength, const float fovYStep)
 {
 	for (int x = 0; x < IMG_WIDTH; x++)
 	{
@@ -339,63 +344,59 @@ void renderImage(const float imgFocalLength, const float fovYStep)
 
 		if (pixelDepth > 0.0f)
 		{
-			projWallPixelHeight = static_cast<int>((WALL_HEIGHT / (pixelDepth * imgFocalLength))  * static_cast<float>(IMG_HEIGHT));
+			projWallPixelHeight = static_cast<int>((WALL_HEIGHT / (pixelDepth * imgFocalLength)) * static_cast<float>(IMG_HEIGHT));
 			projWallPixelHeight = (projWallPixelHeight < IMG_HEIGHT / 2) ? projWallPixelHeight : IMG_HEIGHT / 2;
 		}
 
 		int tmp = (IMG_HEIGHT / 2) - projWallPixelHeight;
 		int floorPixelHeight = tmp;
 		int ceilPixelHeight = IMG_HEIGHT - tmp;
+
+		glm::vec3 rayDir(hitR.dirX, 0.0f, hitR.dirY);
+		rayDir = glm::normalize(rayDir);
+		const glm::vec3 planePosition = cameraPos + rayDir * hitR.dist;
+		const glm::vec3 planeNormal = getWallNormal(hitR.wallNormal);
 	
 		for (int y = 0; y < IMG_HEIGHT; y++)
 		{
-
 			float theta = 0.0f;
 			float t = 0.0f;
 			glm::vec3 color(0.0f);
 
 			if (y >= IMG_HEIGHT / 2)
 			{
-				theta = static_cast<float>(y - (IMG_HEIGHT / 2)) * fovYStep;
+				theta = -static_cast<float>(y - (IMG_HEIGHT / 2)) * fovYStep;
 			}
 			else
 			{
-				theta = -static_cast<float>((IMG_HEIGHT / 2) - y) * fovYStep;
+				theta = static_cast<float>((IMG_HEIGHT / 2) - y) * fovYStep;
 			}
 
-	
-			if (y < floorPixelHeight) // render floor
+			glm::vec3 rayDir(hitR.dirX, sin(theta), hitR.dirY);
+			rayDir = glm::normalize(rayDir);
+			const float ON = glm::dot(cameraPos - planePosition, planeNormal);
+			const float DN = glm::max(0.0001f, glm::dot(planeNormal, rayDir));
+			t = std::fabs(ON / DN);
+			const glm::vec3 wallPos = cameraPos + rayDir * t;
+
+			if (std::abs(wallPos.y) <= WALL_HEIGHT)
 			{
-				glm::vec2 ray(1.0f, std::sin(theta));
-				ray = glm::normalize(ray);
-				t = (abs(ray.y) > 0.001f) ? (-WALL_HEIGHT) / ray.y : 1000.0f;
-				t -= imgFocalLength;	
-				color = glm::vec3(t, t, t + 30.0f);
+				color = glm::vec3(150.0f);
 			}
-			else if (y > ceilPixelHeight) // render Ceiling
-			{
-				glm::vec2 ray(1.0f, std::sin(theta));
-				ray = glm::normalize(ray);
-				t = (abs(ray.y) > 0.001f)?  (WALL_HEIGHT) / ray.y : 1000.0f;
-				t -= imgFocalLength;
-				color = glm::vec3(t + 30.0f, t, t);
+			else if(wallPos.y > WALL_HEIGHT) // ceiling
+			{	
+				t = (abs(rayDir.y) > 0.001f) ? (WALL_HEIGHT) / rayDir.y : 100.0f;
+				color = glm::vec3(50.0f,100.0f,50.0f);
 			}
 			else
 			{
-				t = pixelDepth;
-				if (hitMapType == MAP_DOOR)
-				{
-					color = glm::vec3(t + 100.0f, t + 100.0f, t);
-				}
-				else
-				{
-					color = glm::vec3(t + 50.0f, t + 50.0f, t + 50.0f);
-				}
+				t = (abs(rayDir.y) > 0.001f) ? (-WALL_HEIGHT) / rayDir.y : 100.0f;
+				color = glm::vec3(100.0f, 50.0f, 50.0f);
 			}
 
-			const float fog = getFogValue(t, 15.0f, 50.0f);
-			color = glm::vec3(glm::min(255.0f, color.x), glm::min(255.0f, color.y), glm::min(255.0f, color.z));
+			const float fog = getFogValue(t, 2.0f, 45.0f);
 			color = color * fog + fogColor * (1.0f - fog);
+			color = glm::vec3(glm::min(255.0f, color.x), glm::min(255.0f, color.y), glm::min(255.0f, color.z));
 			setPixel(x, y, glm::ivec3(color.x, color.y, color.z));
 		}
 	}
@@ -433,13 +434,15 @@ void rayCastImage(float x, float y, float dirX, float dirY, float fovDeg)
 		glm::vec2 d = glm::normalize((A + B * s) - cameraPos);
 		float cosdir = glm::dot(d, cameraDir);
 		HitRecord hit = rayCastMap(cameraPos, d);
-		hitImage[i].dist = hit.dist;
-		hitImage[i].dist *= cosdir; // get the projected distance (Fish Bowl effect)
+		hitImage[i].dist = hit.dist * cosdir;
 		hitImage[i].mapValue = hit.mapValue;
+		hitImage[i].wallNormal = hit.wallNormal;
+		hitImage[i].dirX = d.x;
+		hitImage[i].dirY = d.y;
 		s += step;
 	}
 
-	renderImage(imgFocalLength,fovyStep);
+	renderImage(glm::vec3(cameraPos.x,0.0f, cameraPos.y),imgFocalLength,fovyStep);
 }
 
 int getMapType(float x, float y)

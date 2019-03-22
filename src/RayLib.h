@@ -7,28 +7,32 @@
 const int IMG_WIDTH = 800;
 const int IMG_HEIGHT = 600;
 
-#define MAP_WIDTH 80
+#define MAP_WIDTH 72
 #define MAP_HEIGHT 32
 #define NUM_LIGHTS 3
 
 const float degToRad = 3.14159265359f / 180.0f;
 const float radToDeg = 180.0f / 3.14159265359f;
 
-const float WALL_HEIGHT = 5.0f;
-
+const float WALL_HEIGHT = 3.0f;
 const unsigned int MAP_EMPTY = 0u;
 const unsigned int MAP_WALL = 1u;
 const unsigned int MAP_DOOR = 2u;
 const unsigned int MAP_LIGHT = 3u;
 
+const unsigned int WALL_NORM_POS_X = 0;
+const unsigned int WALL_NORM_NEG_X = 1;
+const unsigned int WALL_NORM_POS_Y = 2;
+const unsigned int WALL_NORM_NEG_Y = 3;
+
+
 struct HitRecord
 {
 	float dist{ 0.0f };
-	float light{ 0.0f };
-	float lightDepth{ 0.0f };
 	float dirX{ 0.0f };
 	float dirY{ 0.0f };
 	unsigned int mapValue{ MAP_EMPTY };
+	unsigned int wallNormal{ WALL_NORM_POS_X };
 	int mapX{ 0 };
 	int mapY{ 0 };
 };
