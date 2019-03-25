@@ -8,7 +8,6 @@ using namespace glm;
 unsigned char image[IMG_WIDTH * IMG_HEIGHT * 4];
 unsigned int floorMap[MAP_WIDTH * MAP_HEIGHT];
 const glm::vec3 fogColor(20.0f, 50.0f, 25.0f);
-//unsigned int lightMap[MAP_WIDTH * MAP_HEIGHT];
 HitRecord hitImage[IMG_WIDTH];
 //const glm::vec4 LIGHTS[NUM_LIGHTS] = { glm::vec4(3.0f, 1.0f, 3.0f, 32.0f), glm::vec4(31.0f, 0.6f, 10.0f, 8.0f),  glm::vec4(62.5f, 0.5f, 3.5f, 16.0f) };
 
@@ -41,7 +40,6 @@ void createMap()
 		floorMap[mapIndex] = MAP_WALL;
 	}
 
-
 	// create wall 2
 	for (int y = 8; y < MAP_HEIGHT; y++)
 	{
@@ -64,34 +62,7 @@ void createMap()
 	floorMap[3] = MAP_DOOR;
 	floorMap[(MAP_WIDTH - 4) + (MAP_HEIGHT - 1) * MAP_WIDTH] = MAP_DOOR;
 	floorMap[(MAP_WIDTH - 5) + (MAP_HEIGHT - 1) * MAP_WIDTH] = MAP_DOOR;
-	
-/*
-	// update light map
-	for (int y = 0; y < MAP_HEIGHT; y++)
-	{
-		for (int x = 0; x < MAP_WIDTH; x++)
-		{
-			mapIndex = x + y * MAP_WIDTH;
-			unsigned int lightMapValue = 0;
-			unsigned int mask = 1u;
 
-			glm::vec2 pos(static_cast<float>(x), static_cast<float>(y));
-
-			for (int i = 0; i < NUM_LIGHTS; i++)
-			{
-				glm::vec4 li = LIGHTS[i];
-				glm::vec2 lightPos(li.x, li.z);
-
-				if (!shadowRayCast(pos, lightPos))
-				{
-					lightMapValue += mask;
-				}
-
-				mask *= 2u;
-			}
-			lightMap[mapIndex] = lightMapValue;
-		}
-	}*/
 }
 
 unsigned int * getFloorMapPtr()
@@ -177,20 +148,10 @@ HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir)
 		const unsigned int mapValue = (firstStep) ? MAP_EMPTY : getMapValue(glm::ivec2(px, py));
 		firstStep = false;
 
-		if (mapValue == MAP_WALL)
+		if (mapValue == MAP_WALL || mapValue == MAP_DOOR)
 		{
 			hitc.dist = dist;
-			hitc.mapValue = MAP_WALL;
-			hitc.wallNormal = wallNormal;
-			hitc.mapX = iNext.x;
-			hitc.mapY = iNext.y;
-			return hitc;
-		}
-
-		if (mapValue == MAP_DOOR)
-		{
-			hitc.dist = dist;
-			hitc.mapValue = MAP_DOOR;
+			hitc.mapValue = mapValue;
 			hitc.wallNormal = wallNormal;
 			hitc.mapX = iNext.x;
 			hitc.mapY = iNext.y;
@@ -327,7 +288,6 @@ glm::vec3 getWallNormal(const unsigned int wn)
 		norm = glm::vec3(0.0f, 0.0f, -1.0f);
 		break;
 	}
-
 	return norm;
 }
 

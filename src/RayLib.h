@@ -4,8 +4,8 @@
 #ifndef RAY_LIB_H
 #define RAY_LIB_H
  
-const int IMG_WIDTH = 800;
-const int IMG_HEIGHT = 600;
+const int IMG_WIDTH = 512;
+const int IMG_HEIGHT = 512;
 
 #define MAP_WIDTH 72
 #define MAP_HEIGHT 32
@@ -24,7 +24,6 @@ const unsigned int WALL_NORM_POS_X = 0;
 const unsigned int WALL_NORM_NEG_X = 1;
 const unsigned int WALL_NORM_POS_Y = 2;
 const unsigned int WALL_NORM_NEG_Y = 3;
-
 
 struct HitRecord
 {

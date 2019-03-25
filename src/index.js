@@ -1,8 +1,12 @@
 
 import RayKarstenModule from "./RayKarsten.js";
 
-const WIDTH = 800;
-const HEIGHT = 600;
+const WIDTH = 512;
+const HEIGHT = 512;
+
+document.addEventListener('DOMContentLoaded', function(event) {
+  
+
 
 let mWASMReady = false;
 let up = false;
@@ -106,7 +110,6 @@ function gameLoop() {
       // document.getElementById('results').innerHTML = "<b>" + player.posX + "," + player.posY + "</b>";
     }
   }
-
   window.requestAnimationFrame(gameLoop)
 }
 
@@ -127,6 +130,7 @@ function press(e) {
     left = true
   }
 }
+
 document.addEventListener('keyup', release)
 function release(e) {
   if (e.keyCode === 87 /* w */) {
@@ -142,3 +146,12 @@ function release(e) {
     left = false
   }
 }
+
+document.getElementById("leftButton").addEventListener('mousedown', function(event){  left = true});
+document.getElementById("leftButton").addEventListener('mouseup', function(event){  left = false});
+document.getElementById("leftButton").addEventListener('mouseleave', function(event){  left = false});
+document.getElementById("rightButton").addEventListener('mousedown', function(event){  right = true});
+document.getElementById("rightButton").addEventListener('mouseup', function(event){  right = false});
+document.getElementById("rightButton").addEventListener('mouseleave', function(event){  right = false});
+
+})
