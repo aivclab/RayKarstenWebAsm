@@ -150,8 +150,13 @@ function release(e) {
 document.getElementById("leftButton").addEventListener('mousedown', function(event){  left = true});
 document.getElementById("leftButton").addEventListener('mouseup', function(event){  left = false});
 document.getElementById("leftButton").addEventListener('mouseleave', function(event){  left = false});
+document.getElementById("leftButton").addEventListener('touchstart', function(event){  left = true});
+document.getElementById("leftButton").addEventListener('touchend', function(event){  left = false});
+
 document.getElementById("rightButton").addEventListener('mousedown', function(event){  right = true});
 document.getElementById("rightButton").addEventListener('mouseup', function(event){  right = false});
 document.getElementById("rightButton").addEventListener('mouseleave', function(event){  right = false});
+document.getElementById("rightButton").addEventListener('touchstart', function(event){ right = true });
+document.getElementById("rightButton").addEventListener('touchend', function(event){  right = false});
 
 })
