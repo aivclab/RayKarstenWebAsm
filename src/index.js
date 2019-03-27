@@ -1,4 +1,6 @@
 
+require("./style.css");
+require("normalize.css");
 import RayKarstenModule from "./RayKarsten.js";
 
 const WIDTH = 512;
@@ -53,6 +55,12 @@ class Player {
 }
 
 const canvas = document.getElementById('canvas');
+
+let styledim = Math.min(WIDTH, HEIGHT, window.innerWidth, window.innerHeight);
+canvas.style.width = `${styledim}px`;
+canvas.style.height = `${styledim}px`;
+canvas.style.left = "0px";
+
 const ctx = canvas.getContext('2d');
 let wrapper = new RayKarstenModule();
 const imgData = ctx.createImageData(WIDTH, HEIGHT);
@@ -147,16 +155,32 @@ function release(e) {
   }
 }
 
-document.getElementById("leftButton").addEventListener('mousedown', function(event){  left = true});
-document.getElementById("leftButton").addEventListener('mouseup', function(event){  left = false});
-document.getElementById("leftButton").addEventListener('mouseleave', function(event){  left = false});
-document.getElementById("leftButton").addEventListener('touchstart', function(event){  left = true});
-document.getElementById("leftButton").addEventListener('touchend', function(event){  left = false});
 
-document.getElementById("rightButton").addEventListener('mousedown', function(event){  right = true});
-document.getElementById("rightButton").addEventListener('mouseup', function(event){  right = false});
-document.getElementById("rightButton").addEventListener('mouseleave', function(event){  right = false});
-document.getElementById("rightButton").addEventListener('touchstart', function(event){ right = true });
-document.getElementById("rightButton").addEventListener('touchend', function(event){  right = false});
+["left", "right", "up", "down"].forEach(function(direction) {
+ const btn = document.getElementById(direction + "Button");
+ let e = {keyCode: 0};
+ if ( direction == "left" )
+ {
+  e.keyCode = 65;
+ }
+ if ( direction == "right" )
+ {
+  e.keyCode = 68;
+ }
+ if ( direction == "up" )
+ {
+  e.keyCode = 87;
+ }
+ if ( direction == "down" )
+ {
+  e.keyCode = 83;
+ }
 
-})
+ btn.addEventListener('mousedown', function(){  press(e); });
+ btn.addEventListener('mouseup', function(){  release(e) });
+ btn.addEventListener('mouseleave', function(){  release(e) });
+ btn.addEventListener('touchstart', function(){ press(e) });
+ btn.addEventListener('touchend', function(event){ release(e); });
+
+});
+});
