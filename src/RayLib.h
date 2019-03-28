@@ -30,6 +30,7 @@ struct HitRecord
 	float dist{ 0.0f };
 	float dirX{ 0.0f };
 	float dirY{ 0.0f };
+	float cosDir{ 1.0f };
 	unsigned int mapValue{ MAP_EMPTY };
 	unsigned int wallNormal{ WALL_NORM_POS_X };
 	int mapX{ 0 };

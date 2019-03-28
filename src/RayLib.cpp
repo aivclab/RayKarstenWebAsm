@@ -38,12 +38,16 @@ void createMap()
 	{
 		mapIndex = 13 + y * MAP_WIDTH;
 		floorMap[mapIndex] = MAP_WALL;
+		mapIndex = 14 + y * MAP_WIDTH;
+		floorMap[mapIndex] = MAP_WALL;
 	}
 
 	// create wall 2
 	for (int y = 8; y < MAP_HEIGHT; y++)
 	{
 		mapIndex = MAP_WIDTH - 16 + y * MAP_WIDTH;
+		floorMap[mapIndex] = MAP_WALL;
+		mapIndex = MAP_WIDTH - 17 + y * MAP_WIDTH;
 		floorMap[mapIndex] = MAP_WALL;
 	}
 
@@ -80,18 +84,6 @@ HitRecord * getHitRecords()
 	return &hitImage[0];
 }
 
-/*
-unsigned int * getLightMapPtr()
-{
-	return &lightMap[0];
-}
-
-
-glm::vec4 getLight(const unsigned int i)
-{
-	return LIGHTS[i];
-}
-*/
 unsigned int getImageSize()
 {
 	return IMG_WIDTH *IMG_HEIGHT * 4;
@@ -127,8 +119,8 @@ HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir)
 	HitRecord hitc;
 	glm::ivec2 iNext;
 	glm::ivec2 iStep;
-
 	glm::vec2 deltaInv;
+
 	deltaInv.x = (std::abs(dir.x) < 0.0000001f) ? 100000.0f : 1.0f / dir.x;
 	deltaInv.y = (std::abs(dir.y) < 0.0000001f) ? 100000.0f : 1.0f / dir.y;
 
@@ -143,8 +135,8 @@ HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir)
 	float dist = 0.0f;
 	do
 	{
-		const float px = p.x + dir.x * dist *1.001f;
-		const float py = p.y + dir.y * dist *1.001f;
+		const float px = p.x + dir.x * dist *1.0001f;
+		const float py = p.y + dir.y * dist *1.0001f;
 		const unsigned int mapValue = (firstStep) ? MAP_EMPTY : getMapValue(glm::ivec2(px, py));
 		firstStep = false;
 
@@ -157,18 +149,6 @@ HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir)
 			hitc.mapY = iNext.y;
 			return hitc;
 		}
-
-		/*if (mapValue == MAP_LIGHT)
-		{
-			glm::vec2 intersection = intersectCircle(p, dir, glm::vec2(static_cast<float>(iNext.x) + 0.5f, static_cast<float>(iNext.y) + 0.5f), 0.5f);
-
-			if (intersection.x > 0.0f)
-			{
-				hitc.light += std::abs(intersection.x - intersection.y);
-				hitc.lightDepth = intersection.x;
-			}
-
-		}*/
 
 		float dx = (static_cast<float>(iNext.x) - p.x) * deltaInv.x;
 		float dy = (static_cast<float>(iNext.y) - p.y) * deltaInv.y;
@@ -292,29 +272,52 @@ glm::vec3 getWallNormal(const unsigned int wn)
 }
 
 
+// https://www.shadertoy.com/view/4sfGWX
+glm::vec3 wolfensteinGreyBrick(glm::vec2 uv_)
+{
+    glm::vec2 uv = floor(mod(uv_ + 64.0f, vec2(64.0f)));
+	vec2 buv = vec2(mod(uv.x + 1.0f + (floor((uv.y + 1.0f) / 16.0f) * 16.0f), 32.0f), mod(uv.y + 1.0f, 16.0f));
+	float bbr = mix(190.0f, 91.0f, (buv.y) / 14.0f);
+	if (buv.x < 2.0f || buv.y < 2.0f)
+	{
+		bbr = 52.0f;
+	}
+	glm::vec3 col = vec3(bbr*0.95f);
+	return col;
+}
+
+glm::vec3 getBrickTexture(const float u, const float v)
+{
+	const int brickRows = 4;
+	const float mortar = 0.1f;
+	int brickCollums = 3;
+
+	float row = v * static_cast<float>(brickRows);
+	float rowOffset = row - std::floorf(row);
+
+	if (static_cast<int>(row) % 2 == 0) brickCollums -= 1;
+
+	float col = u * static_cast<float>(brickCollums);
+	float colOffset = col - std::floorf(col);
+	bool insideBrick = (rowOffset > mortar && colOffset > mortar);
+
+	if (insideBrick)
+	{
+		return glm::vec3(64.0f);
+	}
+	return glm::vec3(165.0f);
+}
+
+
 void renderImage(const glm::vec3 cameraPos, const float imgFocalLength, const float fovYStep)
 {
 	for (int x = 0; x < IMG_WIDTH; x++)
-	{
-		
+	{	
 		const HitRecord &hitR = hitImage[x];
-		const float pixelDepth = hitR.dist;
 		const unsigned int hitMapType = hitImage[x].mapValue;
-		int projWallPixelHeight = 0;
-
-		if (pixelDepth > 0.0f)
-		{
-			projWallPixelHeight = static_cast<int>((WALL_HEIGHT / (pixelDepth * imgFocalLength)) * static_cast<float>(IMG_HEIGHT));
-			projWallPixelHeight = (projWallPixelHeight < IMG_HEIGHT / 2) ? projWallPixelHeight : IMG_HEIGHT / 2;
-		}
-
-		int tmp = (IMG_HEIGHT / 2) - projWallPixelHeight;
-		int floorPixelHeight = tmp;
-		int ceilPixelHeight = IMG_HEIGHT - tmp;
-
-		glm::vec3 rayDir(hitR.dirX, 0.0f, hitR.dirY);
-		rayDir = glm::normalize(rayDir);
-		const glm::vec3 planePosition = cameraPos + rayDir * hitR.dist;
+	
+		glm::vec3 rayDir2D(hitR.dirX, 0.0f, hitR.dirY);
+		const glm::vec3 planePosition = cameraPos + rayDir2D * hitR.dist;
 		const glm::vec3 planeNormal = getWallNormal(hitR.wallNormal);
 	
 		for (int y = 0; y < IMG_HEIGHT; y++)
@@ -332,29 +335,42 @@ void renderImage(const glm::vec3 cameraPos, const float imgFocalLength, const fl
 				theta = static_cast<float>((IMG_HEIGHT / 2) - y) * fovYStep;
 			}
 
-			glm::vec3 rayDir(hitR.dirX, sin(theta), hitR.dirY);
-			rayDir = glm::normalize(rayDir);
+			const glm::vec3 rayDir =  glm::normalize(glm::vec3(hitR.dirX, sin(theta), hitR.dirY));
+			
+			// ray wall intersection test 
 			const float ON = glm::dot(cameraPos - planePosition, planeNormal);
-			const float DN = glm::max(0.0001f, glm::dot(planeNormal, rayDir));
+			const float DN = glm::max(0.00001f, glm::dot(planeNormal, rayDir));
 			t = std::fabs(ON / DN);
 			const glm::vec3 wallPos = cameraPos + rayDir * t;
+			
+			if (std::abs(wallPos.y*hitR.cosDir) <= WALL_HEIGHT)
+			{	   
+				// calculate texture coordinates
+				float valY = wallPos.y*hitR.cosDir + WALL_HEIGHT; // make it positive
+				float valX = (abs(planeNormal.z) > 0.0001f) ?  wallPos.x : wallPos.z;
 
-			if (std::abs(wallPos.y) <= WALL_HEIGHT)
-			{
-				color = glm::vec3(150.0f);
+				valX *= 0.249f;
+				valY *= 0.25f;
+				float u = valX - std::floorf(valX);
+				float v = valY - std::floorf(valY);
+
+				//color = getBrickTexture(u, v);
+				color = wolfensteinGreyBrick(glm::vec2(u,-v)*64.01f);
 			}
 			else if(wallPos.y > WALL_HEIGHT) // ceiling
 			{	
+				// ray ceil intersection
 				t = (abs(rayDir.y) > 0.001f) ? (WALL_HEIGHT) / rayDir.y : 100.0f;
-				color = glm::vec3(50.0f,100.0f,50.0f);
+				color = glm::vec3(50.0f,80.0f,50.0f);
 			}
 			else
 			{
+				// ray floor intersection
 				t = (abs(rayDir.y) > 0.001f) ? (-WALL_HEIGHT) / rayDir.y : 100.0f;
-				color = glm::vec3(100.0f, 50.0f, 50.0f);
+				color = glm::vec3(50.0f, 50.0f, 50.0f);
 			}
 
-			const float fog = getFogValue(t, 2.0f, 45.0f);
+			const float fog = getFogValue(t, 2.0f, 40.0f);
 			color = color * fog + fogColor * (1.0f - fog);
 			color = glm::vec3(glm::min(255.0f, color.x), glm::min(255.0f, color.y), glm::min(255.0f, color.z));
 			setPixel(x, y, glm::ivec3(color.x, color.y, color.z));
@@ -377,10 +393,11 @@ void rayCastImage(float x, float y, float dirX, float dirY, float fovDeg)
 	const float fovyStep = fovy / static_cast<float>(IMG_HEIGHT);
 	const float imgFocalLength = static_cast<float>(IMG_HEIGHT) / (static_cast<float>((IMG_WIDTH / 2)) / tanf(fov * 0.5f));
 
+	// camera setup
 	glm::vec2 cameraPos(x, y);
-	glm::vec2 cameraDir(dirX, dirY);
-	cameraDir = glm::normalize(cameraDir);
-
+	glm::vec2 cameraDir = glm::normalize(glm::vec2(dirX, dirY));
+	
+	// camera plane 
 	float fp = std::tanf(fov * 0.5f);
 	glm::vec2 A = cameraPos + cameraDir - glm::vec2(-cameraDir.y, cameraDir.x) * fp;
 	glm::vec2 Ap = cameraPos + cameraDir + glm::vec2(-cameraDir.y, cameraDir.x) * fp;
@@ -394,11 +411,12 @@ void rayCastImage(float x, float y, float dirX, float dirY, float fovDeg)
 		glm::vec2 d = glm::normalize((A + B * s) - cameraPos);
 		float cosdir = glm::dot(d, cameraDir);
 		HitRecord hit = rayCastMap(cameraPos, d);
-		hitImage[i].dist = hit.dist * cosdir;
+		hitImage[i].dist = hit.dist;
 		hitImage[i].mapValue = hit.mapValue;
 		hitImage[i].wallNormal = hit.wallNormal;
 		hitImage[i].dirX = d.x;
 		hitImage[i].dirY = d.y;
+		hitImage[i].cosDir = cosdir;
 		s += step;
 	}
 
