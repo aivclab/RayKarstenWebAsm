@@ -382,9 +382,9 @@ glm::vec3 getBrickTexture(const float u, const float v)
 
 	if (insideBrick)
 	{
-		return glm::vec3(64.0f);
+		return glm::vec3(150.0f);
 	}
-	return glm::vec3(165.0f);
+	return glm::vec3(50.0f);
 }
 
 
@@ -444,7 +444,7 @@ void renderImage(const glm::vec3 cameraPos, const float imgFocalLength, const fl
 				const glm::vec3 ceilPos = cameraPos + rayDir * t;
 				float flight =  glm::max(ambientLight, getLight(glm::vec2(ceilPos.x, ceilPos.z))) * 0.15f;
 				flight = flight * flight * flight * flight * flight;
-				color = glm::vec3(50.0f,80.0f,50.0f) * flight;
+				color = glm::vec3(70.0f,90.0f,70.0f) * flight;
 			}
 			else
 			{
