@@ -14,7 +14,7 @@ const int IMG_HEIGHT = 512;
 const float degToRad = 3.14159265359f / 180.0f;
 const float radToDeg = 180.0f / 3.14159265359f;
 
-const float WALL_HEIGHT = 3.0f;
+const float WALL_HEIGHT = 4.0f;
 const unsigned int MAP_EMPTY = 0u;
 const unsigned int MAP_WALL = 1u;
 const unsigned int MAP_DOOR = 2u;
