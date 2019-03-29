@@ -37,7 +37,6 @@ struct HitRecord
 	int mapY{ 0 };
 };
 
-
 void rayCastImage(float x, float y, float dirX, float dirY, float fov);
 int getMapType(float x, float y);
 unsigned char *getImagePtr();
@@ -47,9 +46,7 @@ bool shadowRayCast(const glm::vec2 p, const glm::vec2 lightSrc);
 HitRecord rayCastMap(const glm::vec2 p, const glm::vec2 dir);
 void createMap();
 unsigned int *getFloorMapPtr();
-unsigned int *getLightMapPtr();
 HitRecord *getHitRecords();
-glm::vec4 getLight(const unsigned int i);
 
 
 #endif // RAY_LIB_H

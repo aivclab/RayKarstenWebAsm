@@ -8,9 +8,80 @@ using namespace glm;
 unsigned char image[IMG_WIDTH * IMG_HEIGHT * 4];
 unsigned int floorMap[MAP_WIDTH * MAP_HEIGHT];
 const glm::vec3 fogColor(20.0f, 50.0f, 25.0f);
+const float ambientLight = 0.15f;
 HitRecord hitImage[IMG_WIDTH];
-//const glm::vec4 LIGHTS[NUM_LIGHTS] = { glm::vec4(3.0f, 1.0f, 3.0f, 32.0f), glm::vec4(31.0f, 0.6f, 10.0f, 8.0f),  glm::vec4(62.5f, 0.5f, 3.5f, 16.0f) };
+float lightmap[2][MAP_WIDTH * MAP_HEIGHT];
+int lightRead = 0;
+int lightWrite = 1;
 
+
+
+
+void swapLightMaps()
+{
+	int tmp = lightRead;
+	lightRead = lightWrite;
+	lightWrite = tmp;
+}
+
+void initLightMap()
+{
+	for (uint i = 0; i < MAP_WIDTH * MAP_HEIGHT; i++)
+	{
+		lightmap[0][i] = 0.0f;
+		lightmap[1][i] = 0.0f;
+	}
+}
+
+float getLight(int x, int y)
+{
+	const uint mapIndex = x + y * MAP_WIDTH;
+	if (mapIndex >= MAP_WIDTH * MAP_HEIGHT) return 0.0f;
+	return lightmap[lightRead][mapIndex];
+}
+
+void updateLightMap()
+{
+	for (uint x = 0; x < MAP_WIDTH; x++)
+	{
+		for (uint y = 0; y < MAP_HEIGHT; y++)
+		{
+			const uint mapIndex = x + y * MAP_WIDTH;
+			const int mapType = floorMap[mapIndex];
+			if (mapType == MAP_WALL)
+			{
+				lightmap[lightWrite][mapIndex] = 0.0f;
+			}
+			else if (mapType == MAP_LIGHT)
+			{
+				lightmap[lightWrite][mapIndex] = 12.0f; //Inject some light
+			}
+			else
+			{
+				lightmap[lightWrite][mapIndex] = (getLight(x - 1, y) + getLight(x + 1, y) + getLight(x, y-1) + getLight(x, y+1)) * 0.25f;
+			}
+		}
+	}
+	swapLightMaps();
+}
+
+
+// bilinear light 
+float getLight(glm::vec2 pk)
+{
+	glm::vec2 p = pk - glm::vec2(0.5f);
+	const int ix = static_cast<int>(std::floor(p.x));
+	const int iy = static_cast<int>(std::floor(p.y));
+	const float wx = p.x - std::floor(p.x);
+	const float wy = p.y - std::floor(p.y);
+
+	return
+		getLight(ix, iy) * (1.0f-wx) * (1.0f-wy) +
+		getLight(ix, iy + 1) * (1.0f-wx) * (wy) +
+		getLight(ix + 1, iy) * (wx) * (1.0f-wy) +
+		getLight(ix + 1, iy + 1) * ( wx) * (wy);
+
+}
 
 void createMap()
 {
@@ -61,12 +132,21 @@ void createMap()
 		}
 	}
 
-	// create doors
-	floorMap[2] = MAP_DOOR;
-	floorMap[3] = MAP_DOOR;
-	floorMap[(MAP_WIDTH - 4) + (MAP_HEIGHT - 1) * MAP_WIDTH] = MAP_DOOR;
-	floorMap[(MAP_WIDTH - 5) + (MAP_HEIGHT - 1) * MAP_WIDTH] = MAP_DOOR;
+	// create lights
+	mapIndex = 5 + 8 * MAP_WIDTH;
+	floorMap[mapIndex] = MAP_LIGHT;
 
+	mapIndex = 35 + 8 * MAP_WIDTH;
+	floorMap[mapIndex] = MAP_LIGHT;
+
+	mapIndex = 45 + 8 * MAP_WIDTH;
+	floorMap[mapIndex] = MAP_LIGHT;
+
+	mapIndex = (MAP_WIDTH - 8) + (MAP_HEIGHT - 5) *MAP_WIDTH;
+	floorMap[mapIndex] = MAP_LIGHT;
+
+	mapIndex = (MAP_WIDTH - 8) + (MAP_HEIGHT - 15) *MAP_WIDTH;
+	floorMap[mapIndex] = MAP_LIGHT;
 }
 
 unsigned int * getFloorMapPtr()
@@ -98,7 +178,6 @@ int getMapValue(const glm::ivec2 p)
 {
 	const int index = p.x + p.y * MAP_WIDTH;
 	if (index < 0 || index >= MAP_WIDTH*MAP_HEIGHT) return MAP_EMPTY;
-
 	return floorMap[index];
 }
 
@@ -319,7 +398,7 @@ void renderImage(const glm::vec3 cameraPos, const float imgFocalLength, const fl
 		glm::vec3 rayDir2D(hitR.dirX, 0.0f, hitR.dirY);
 		const glm::vec3 planePosition = cameraPos + rayDir2D * hitR.dist;
 		const glm::vec3 planeNormal = getWallNormal(hitR.wallNormal);
-	
+		
 		for (int y = 0; y < IMG_HEIGHT; y++)
 		{
 			float theta = 0.0f;
@@ -353,21 +432,27 @@ void renderImage(const glm::vec3 cameraPos, const float imgFocalLength, const fl
 				valY *= 0.25f;
 				float u = valX - std::floorf(valX);
 				float v = valY - std::floorf(valY);
-
+				const float light = glm::min(1.0f, glm::max(ambientLight, getLight(glm::vec2(wallPos.x, wallPos.z))));
 				//color = getBrickTexture(u, v);
 				color = wolfensteinGreyBrick(glm::vec2(u,-v)*64.01f);
+				color *= light;
 			}
 			else if(wallPos.y > WALL_HEIGHT) // ceiling
 			{	
 				// ray ceil intersection
 				t = (abs(rayDir.y) > 0.001f) ? (WALL_HEIGHT) / rayDir.y : 100.0f;
-				color = glm::vec3(50.0f,80.0f,50.0f);
+				const glm::vec3 ceilPos = cameraPos + rayDir * t;
+				float flight =  glm::max(ambientLight, getLight(glm::vec2(ceilPos.x, ceilPos.z))) * 0.15f;
+				flight = flight * flight * flight * flight * flight;
+				color = glm::vec3(50.0f,80.0f,50.0f) * flight;
 			}
 			else
 			{
 				// ray floor intersection
 				t = (abs(rayDir.y) > 0.001f) ? (-WALL_HEIGHT) / rayDir.y : 100.0f;
-				color = glm::vec3(50.0f, 50.0f, 50.0f);
+				const glm::vec3 floorPos = cameraPos + rayDir * t;
+				const float flight = glm::min(1.0f, glm::max(ambientLight, getLight(glm::vec2(floorPos.x, floorPos.z))));
+				color = glm::vec3(50.0f, 50.0f, 50.0f) * flight;
 			}
 
 			const float fog = getFogValue(t, 2.0f, 40.0f);
@@ -384,6 +469,11 @@ void rayCastImage(float x, float y, float dirX, float dirY, float fovDeg)
 	if (!mapCreated)
 	{
 		createMap();
+		initLightMap();
+		for (uint i = 0; i < 300; i++)
+		{
+			updateLightMap();
+		}
 		mapCreated = true;
 	}
 
