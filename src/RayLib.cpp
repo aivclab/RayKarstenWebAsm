@@ -15,8 +15,6 @@ int lightRead = 0;
 int lightWrite = 1;
 
 
-
-
 void swapLightMaps()
 {
 	int tmp = lightRead;
@@ -189,7 +187,7 @@ glm::vec2 intersectCircle(const glm::vec2 p, const glm::vec2 d, const glm::vec2 
 	const float C = glm::dot(pLoc, pLoc) - radius*radius;
 	const float discr = (B*B) - (4.0f * A * C);
 	if (discr < 0.0f) return glm::vec2(-1.0f);
-	glm::vec2 sol((-B + std::sqrtf(discr)) / 2 * A, (-B - std::sqrtf(discr)) / 2 * A);
+	glm::vec2 sol((-B + std::sqrt(discr)) / 2 * A, (-B - std::sqrt(discr)) / 2 * A);
 	return sol;
 }
 
@@ -372,12 +370,12 @@ glm::vec3 getBrickTexture(const float u, const float v)
 	int brickCollums = 3;
 
 	float row = v * static_cast<float>(brickRows);
-	float rowOffset = row - std::floorf(row);
+	float rowOffset = row - std::floor(row);
 
 	if (static_cast<int>(row) % 2 == 0) brickCollums -= 1;
 
 	float col = u * static_cast<float>(brickCollums);
-	float colOffset = col - std::floorf(col);
+	float colOffset = col - std::floor(col);
 	bool insideBrick = (rowOffset > mortar && colOffset > mortar);
 
 	if (insideBrick)
@@ -430,8 +428,8 @@ void renderImage(const glm::vec3 cameraPos, const float imgFocalLength, const fl
 
 				valX *= 0.249f;
 				valY *= 0.25f;
-				float u = valX - std::floorf(valX);
-				float v = valY - std::floorf(valY);
+				float u = valX - std::floor(valX);
+				float v = valY - std::floor(valY);
 				const float light = glm::min(1.0f, glm::max(ambientLight, getLight(glm::vec2(wallPos.x, wallPos.z))));
 				//color = getBrickTexture(u, v);
 				color = wolfensteinGreyBrick(glm::vec2(u,-v)*64.01f);
@@ -481,14 +479,14 @@ void rayCastImage(float x, float y, float dirX, float dirY, float fovDeg)
 	const float aspectRatio = (static_cast<float>(IMG_HEIGHT) / static_cast<float>(IMG_WIDTH));
 	const float fovy = fov * aspectRatio;
 	const float fovyStep = fovy / static_cast<float>(IMG_HEIGHT);
-	const float imgFocalLength = static_cast<float>(IMG_HEIGHT) / (static_cast<float>((IMG_WIDTH / 2)) / tanf(fov * 0.5f));
+	const float imgFocalLength = static_cast<float>(IMG_HEIGHT) / (static_cast<float>((IMG_WIDTH / 2)) / tan(fov * 0.5f));
 
 	// camera setup
 	glm::vec2 cameraPos(x, y);
 	glm::vec2 cameraDir = glm::normalize(glm::vec2(dirX, dirY));
 	
 	// camera plane 
-	float fp = std::tanf(fov * 0.5f);
+	float fp = std::tan(fov * 0.5f);
 	glm::vec2 A = cameraPos + cameraDir - glm::vec2(-cameraDir.y, cameraDir.x) * fp;
 	glm::vec2 Ap = cameraPos + cameraDir + glm::vec2(-cameraDir.y, cameraDir.x) * fp;
 	glm::vec2 B = Ap - A;
