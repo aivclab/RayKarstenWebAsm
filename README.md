@@ -4,6 +4,8 @@
 
 Tutorial Web Assembly and Ray Casting
 
+[Link to article](https://github.com/aivclab/RayKarstenWebAsm)
+
 ## Quickstart
 
 Following is a quickstart guide to get your computer setup for running the demo
